@@ -1,49 +1,66 @@
 ---
-title: "Hello R Markdown"
-author: "Frida Gomam"
-date: 2020-12-01T21:13:14-05:00
-categories: ["R"]
-tags: ["R Markdown", "plot", "regression"]
+title: 'Using {rvest} to Scrape Data from Wikipedia: A Quick Look at USMNT-Mexico
+  Results'
+author: "Joseph Kroymann"
+date: "06/20/2021"
+output:
+  html_document:
+    df_print: paged
+tags:
+- R Data Scraping
+- USMNT
+- Mexico
+categories: R
 ---
 
 
 
-<div id="r-markdown" class="section level1">
-<h1>R Markdown</h1>
-<p>This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <a href="http://rmarkdown.rstudio.com" class="uri">http://rmarkdown.rstudio.com</a>.</p>
-<p>You can embed an R code chunk like this:</p>
-<pre class="r"><code>summary(cars)
-##      speed           dist       
-##  Min.   : 4.0   Min.   :  2.00  
-##  1st Qu.:12.0   1st Qu.: 26.00  
-##  Median :15.0   Median : 36.00  
-##  Mean   :15.4   Mean   : 42.98  
-##  3rd Qu.:19.0   3rd Qu.: 56.00  
-##  Max.   :25.0   Max.   :120.00
-fit &lt;- lm(dist ~ speed, data = cars)
-fit
-## 
-## Call:
-## lm(formula = dist ~ speed, data = cars)
-## 
-## Coefficients:
-## (Intercept)        speed  
-##     -17.579        3.932</code></pre>
-</div>
-<div id="including-plots" class="section level1">
-<h1>Including Plots</h1>
-<p>You can also embed plots. See Figure <a href="#fig:pie">1</a> for example:</p>
-<pre class="r"><code>par(mar = c(0, 1, 0, 1))
-pie(
-  c(280, 60, 20),
-  c(&#39;Sky&#39;, &#39;Sunny side of pyramid&#39;, &#39;Shady side of pyramid&#39;),
-  col = c(&#39;#0292D8&#39;, &#39;#F7EA39&#39;, &#39;#C4B632&#39;),
-  init.angle = -50, border = NA
-)</code></pre>
-<div class="figure"><span id="fig:pie"></span>
-<img src="{{< blogdown/postref >}}index.en_files/figure-html/pie-1.png" alt="A fancy pie chart." width="672" />
-<p class="caption">
-Figure 1: A fancy pie chart.
-</p>
-</div>
+<p>After watching the <a href="https://youtu.be/Wig95n7_lks">highlights</a> of the inaugural Men’s Nations League Final between the USA and Mexico, and learning that the USMNT’s last competitive win over Mexico happened in <a href="https://youtu.be/2fc7Phg7sec">2013</a>, I wanted to investigate how competitive the rivalry has been over the years. As a newer fan of the USMNT, watching competitive matches against Mexico has always been a frustrating experience, but this game proved to be an outlier so far. Using data from Wikipedia, we will see that my experience doesn’t differ much from that of long-term fans of the USMNT.</p>
+<div id="using-rvest-to-scrape-table-data-from-wikipedia" class="section level1">
+<h1>Using {rvest} to Scrape Table Data from Wikipedia</h1>
+<p>When first brainstorming where to get the proper data for this exercise, my first thought was to use the <a href="https://github.com/JaseZiv/worldfootballR">{worldfootballR}</a> package to pull and combine different data sets from <a href="https://fbref.com/en/">FBref</a>. While that pursuit started out to be promising, after looking at the <a href="https://en.wikipedia.org/wiki/Mexico%E2%80%93United_States_soccer_rivalry">Mexico-United States soccer rivalry Wikipedia page</a>, I figured scraping data from that page would be much easier. While there are plenty of ways to scrape data from websites with R, <a href="https://rvest.tidyverse.org/">{rvest}</a> combined with <a href="">{xml2}</a> seemed to be the most popular and simplest package to use from my research. In order to install the package, we can either install {rvest} by itself, or install {tidyverse}, as {rvest} is a part of the {tidyverse}.</p>
+<pre class="r"><code>## installing just {rvest}
+install.packages(&quot;rvest&quot;)
+
+## installing {tidyverse}
+install.packages(&quot;tidyverse&quot;)</code></pre>
+<p>After installing either {rvest} or {tidyverse}, the data scraping process is quite simple. Before we write any more code, we need to identify the URL for the website we want to scrape from. In my case, the URL for the website I’m scraping from is <a href="https://en.wikipedia.org/wiki/Mexico%E2%80%93United_States_soccer_rivalry#List_of_matches" class="uri">https://en.wikipedia.org/wiki/Mexico%E2%80%93United_States_soccer_rivalry#List_of_matches</a>, as shown below.</p>
+<p><img src="screenshots/US_Mex_ListOfMatches.png" /></p>
+<p>Next, we need to find the XPath for the html code of the table we want to scrape data from. This can be done by opening developer tools (Ctrl + Shift + I), enabling the inspect element tool (Ctrl + Shift + C), and clicking on the desired table. Now, as we click or scroll across the webpage, the html code in the developer tools box is going to shift to the code associated with the part of the webpage we’re on. Finding the exact line of code with the inspect element tool is going to be difficult, but we can get to the right place by clicking on an element of the desired table, and scrolling up on the html code until you find something like <strong>&lt;table class = “wikitable&gt;”</strong>. It will look similar to the image below.</p>
+<p><img src="screenshots/US_Mex_ProperHtmlLocation.png" />
+Once we find this specific location, we can simply right-click on the <strong>&lt;table class = “wikitable&gt;”</strong> portion of the code, and copy the full XPath. Now that we have the URL for the website we’re scraping from, and the XPath to the HTML code for the table we’re scraping from, we only need a few lines of code to scrape the data. First, we’re going to use the <a href="https://xml2.r-lib.org/reference/read_xml.html">read_html()</a> function to read in the HTML content of our website. Next, we’ll use the combination of <a href="https://rvest.tidyverse.org/reference/html_nodes.html">html_nodes</a> and <a href="https://rvest.tidyverse.org/reference/html_table.html">html_table</a> to locate the HTML node for our desired table and turn it into a dataframe.</p>
+<pre class="r"><code># loading in &lt;rvest&gt; and/or &lt;tidyverse&gt;
+library(rvest)
+## Warning: package &#39;rvest&#39; was built under R version 4.0.5
+library(tidyverse)
+## Warning: package &#39;tidyverse&#39; was built under R version 4.0.5
+## -- Attaching packages --------------------------------------- tidyverse 1.3.1 --
+## v ggplot2 3.3.3     v purrr   0.3.4
+## v tibble  3.1.2     v dplyr   1.0.6
+## v tidyr   1.1.3     v stringr 1.4.0
+## v readr   1.4.0     v forcats 0.5.1
+## Warning: package &#39;ggplot2&#39; was built under R version 4.0.5
+## Warning: package &#39;tibble&#39; was built under R version 4.0.5
+## Warning: package &#39;tidyr&#39; was built under R version 4.0.5
+## Warning: package &#39;readr&#39; was built under R version 4.0.5
+## Warning: package &#39;purrr&#39; was built under R version 4.0.5
+## Warning: package &#39;dplyr&#39; was built under R version 4.0.5
+## Warning: package &#39;stringr&#39; was built under R version 4.0.5
+## Warning: package &#39;forcats&#39; was built under R version 4.0.5
+## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
+## x dplyr::filter()         masks stats::filter()
+## x readr::guess_encoding() masks rvest::guess_encoding()
+## x dplyr::lag()            masks stats::lag()
+
+# reading in HTML code of desired website
+url &lt;- &quot;https://en.wikipedia.org/wiki/Mexico%E2%80%93United_States_soccer_rivalry#List_of_Matches_2&quot;
+webpage &lt;- read_html(url)
+
+# parsing html table into a list
+data &lt;- webpage %&gt;%
+  html_nodes(xpath = &#39;/html/body/div[3]/div[3]/div[5]/div[1]/table[7]&#39;) %&gt;%
+  html_table()  
+
+# list to dataframe
+data &lt;- data[[1]]</code></pre>
 </div>
